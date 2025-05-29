@@ -176,16 +176,30 @@ def summarize_by_asset(address, processed):
     for tx in processed:
         a = tx['asset']
         if a not in summary:
-            summary[a] = {'incoming_total':0.0,'outgoing_total':0.0,
-                          'incoming_addresses':set(),'outgoing_addresses':set()}
+            summary[a] = {
+                'incoming_total': 0,
+                'outgoing_total': 0,
+                'incoming_by_address': {},   # 주소별 금액
+                'outgoing_by_address': {}
+            }
         e = summary[a]
-        if tx['to'].lower()==addr:
-            e['incoming_total'] += tx['value']; e['incoming_addresses'].add(tx['from'])
-        if tx['from'].lower()==addr:
-            e['outgoing_total'] += tx['value']; e['outgoing_addresses'].add(tx['to'])
-    for e in summary.values():
-        e['incoming_addresses']=sorted(e['incoming_addresses'])
-        e['outgoing_addresses']=sorted(e['outgoing_addresses'])
+
+        # Incoming
+        if tx['to'].lower() == addr:
+            e['incoming_total'] += tx['value']
+            sender = tx['from'].lower()
+            e['incoming_by_address'][sender] = (
+                e['incoming_by_address'].get(sender, 0) + tx['value']
+            )
+
+        # Outgoing
+        if tx['from'].lower() == addr:
+            e['outgoing_total'] += tx['value']
+            receiver = tx['to'].lower()
+            e['outgoing_by_address'][receiver] = (
+                e['outgoing_by_address'].get(receiver, 0) + tx['value']
+            )
+
     return summary
 
 def main():
@@ -228,13 +242,13 @@ def main():
     for asset, data in summary.items():
         print(f"Asset: {asset}")
         print(f"  Incoming total: {data['incoming_total']}")
+        print("  Incoming addresses: ")
+        for addr, val in data['incoming_by_address'].items():
+            print(f"    + {addr}: {val}")
         print(f"  Outgoing total: {data['outgoing_total']}")
-        print("  Incoming addresse : ")
-        for inc in data['incoming_addresses']:
-            print(f"    - {inc}")
-        print("  Outgoing addresses : ")
-        for out in data['outgoing_addresses']:
-            print(f"    - {out}")
+        print("  Outgoing addresses:")
+        for addr, val in data['outgoing_by_address'].items():
+            print(f"    - {addr}: {val}")
 
 if __name__ == '__main__':
     main()
